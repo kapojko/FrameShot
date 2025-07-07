@@ -51,6 +51,11 @@ def read_images_loop(com_port=None, video=False, single=False):
             if not com_port:
                 com_port = find_device_by_vid_pid(VID, PID)
 
+                if not com_port:
+                    print("[ERROR] No FrameCam device found")
+                    time.sleep(1)
+                    continue
+
             print(f"[INFO] Opening serial port {com_port}...")
             ser = serial.Serial(
                 port=com_port,
