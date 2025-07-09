@@ -96,12 +96,22 @@ def read_images_loop(com=None, video=False, single=False, raw=False):
                         raw_image = RawImage(buffer, width=1920, height=1080, interleaving=8)
                         jpeg_data = raw_image.convert_to_jpeg()
 
-                        # Save image
-                        save_image(jpeg_data)
+                        # Process image
+                        if not video:
+                            save_image(jpeg_data)
+                        else:
+                            player.show_next_frame(jpeg_data)
 
                         buffer.clear()
                         start_time = None
                         last_read_time = None
+
+                        if video:
+                            # Send 'S' character to request the next frame
+                            ser.write(b"S")
+                            print("[INFO] Sent 'S' to device, waiting for snapshot to be done...")
+                        elif single:
+                            return
 
                     continue
 
