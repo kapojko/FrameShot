@@ -15,6 +15,10 @@ JPEG_EOF = b"\xff\xd9"  # JPEG end-of-file marker
 
 RAW_TIMEOUT = 1.0  # 1 second
 
+RAW_WIDTH = 1920
+RAW_HEIGHT = 1080
+RAW_INTERLEAVING = 8
+
 OUTPUT_DIR = "DCIM"
 
 
@@ -29,14 +33,20 @@ def find_device_by_vid_pid(target_vid, target_pid):
         time.sleep(1)  # Wait before retrying
 
 
-def save_image(buffer):
+def save_image(buffer, format):
     # Create output directory if it doesn't exist
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
-    # filename format is "FrameCam_YYYYMMDD_HHMMSS.jpg"
+    # Select file extension
+    if format == "jpeg":
+        ext = "jpg"
+    else:
+        ext = format
+
+    # filename format is "FrameCam_YYYYMMDD_HHMMSS.EXT"
     current_time = time.strftime("%Y%m%d_%H%M%S")
-    filename = f"{OUTPUT_DIR}/FrameCam_{current_time}.jpg"
+    filename = f"{OUTPUT_DIR}/FrameCam_{current_time}.{ext}"
 
     with open(filename, "wb") as f:
         f.write(buffer)
@@ -44,7 +54,7 @@ def save_image(buffer):
     print(f"[INFO] Image saved as {filename}")
 
 
-def read_images_loop(com=None, video=False, single=False, raw=False):
+def read_images_loop(com=None, video=False, single=False, raw=False, format="jpeg"):
     if video:
         player = JpegStreamPlayer()
         player.start()
@@ -92,15 +102,23 @@ def read_images_loop(com=None, video=False, single=False, raw=False):
                         # with open("DCIM/image.raw", "wb") as f:
                         #     f.write(buffer)
 
-                        # Convert to JPEG
-                        raw_image = RawImage(buffer, width=1920, height=1080, interleaving=8)
-                        jpeg_data = raw_image.convert_to_jpeg()
+                        # Load image
+                        raw_image = RawImage(buffer, width=RAW_WIDTH, height=RAW_HEIGHT, interleaving=RAW_INTERLEAVING)
+
+                        # Convert to image
+                        if format == "jpeg":
+                            image_data = raw_image.to_jpeg()
+                        elif format == "png":
+                            image_data = raw_image.to_png()
+                        else:
+                            print("[ERROR] Unsupported image format")
+                            return
 
                         # Process image
                         if not video:
-                            save_image(jpeg_data)
+                            save_image(image_data, format)
                         else:
-                            player.show_next_frame(jpeg_data)
+                            player.show_next_frame(image_data)
 
                         buffer.clear()
                         start_time = None
@@ -137,11 +155,11 @@ def read_images_loop(com=None, video=False, single=False, raw=False):
                         mbps = len(buffer) * 8 / ((end_time - start_time) * 1024 * 1024)
                         print(f"[INFO] Transmission speed: {mbps:.2f}mbit/s")
 
-                        jpeg_data = buffer[soi_pos : eof_pos + 2]
+                        image_data = buffer[soi_pos : eof_pos + 2]
                         if not video:
-                            save_image(jpeg_data)
+                            save_image(image_data)
                         else:
-                            player.show_next_frame(jpeg_data)
+                            player.show_next_frame(image_data)
                     else:
                         print("[WARN] JPEG SOI not found. Skipping image...")
 
@@ -182,6 +200,7 @@ if __name__ == "__main__":
     parser.add_argument("-video", action="store_true", help="Play video stream")
     parser.add_argument("-single", action="store_true", help="Read single image")
     parser.add_argument("-raw", action="store_true", help="Read raw image")
+    parser.add_argument("-format", metavar="FORMAT", default="jpeg", help="Raw image save format")
 
     args = parser.parse_args()
 

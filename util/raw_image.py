@@ -17,15 +17,13 @@ class RawImage:
         interleaving_height = height // interleaving
         for i in range(interleaving):
             # lines where (original_y % interleaving == i) go to lines starting from i with step 8
-            deinterleaved[i::interleaving] = bayer_interleaved[i*interleaving_height:(i+1)*interleaving_height:1]
+            deinterleaved[i::interleaving] = bayer_interleaved[i * interleaving_height : (i + 1) * interleaving_height : 1]
 
         return deinterleaved
 
-    def convert_to_jpeg(self):
+    def to_image(self):
         # Convert buffer to 2D numpy array (grayscale image)
-        bayer_image = np.frombuffer(self.buffer, dtype=np.uint8).reshape(
-            (self.height, self.width)
-        )
+        bayer_image = np.frombuffer(self.buffer, dtype=np.uint8).reshape((self.height, self.width))
 
         # Deinterleave
         if self.interleaving:
@@ -35,7 +33,20 @@ class RawImage:
         # OpenCV uses BGR by default
         bgr_image = cv2.cvtColor(bayer_image, cv2.COLOR_BayerBG2BGR)
 
+        return bgr_image
+
+    def to_jpeg(self):
+        bgr_image = self.to_image()
+
         # Convert to JPEG
         _, jpeg_buffer = cv2.imencode(".jpg", bgr_image)
 
         return jpeg_buffer
+
+    def to_png(self):
+        bgr_image = self.to_image()
+
+        # Convert to PNG
+        _, png_buffer = cv2.imencode(".png", bgr_image)
+
+        return png_buffer
