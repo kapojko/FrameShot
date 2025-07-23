@@ -33,7 +33,7 @@ def find_device_by_vid_pid(target_vid, target_pid):
         time.sleep(1)  # Wait before retrying
 
 
-def save_image(buffer, format):
+def save_image(buffer, format="jpeg"):
     # Create output directory if it doesn't exist
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
@@ -55,10 +55,6 @@ def save_image(buffer, format):
 
 
 def read_images_loop(com=None, video=False, single=False, raw=False, format="jpeg"):
-    if video:
-        player = JpegStreamPlayer()
-        player.start()
-
     while True:
         try:
             if not com:
@@ -78,6 +74,10 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                 stopbits=serial.STOPBITS_ONE,
                 timeout=0,  # no read timeout
             )
+
+            if video:
+                player = JpegStreamPlayer()
+                player.start()
 
             if video or single:
                 # Send 'S' character to request the first frame
@@ -168,6 +168,11 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                     last_read_time = None
 
                     if video:
+                        # Check for video to be closed
+                        if not player.running:
+                            print("[INFO] Video closed by user. Exiting...")
+                            return
+
                         # Send 'S' character to request the next frame
                         ser.write(b"S")
                         print("[INFO] Sent 'S' to device, waiting for snapshot to be done...")
