@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 
+from util.image_proc import ImageProc
+
 
 class RawImage:
     def __init__(self, buffer, width, height, interleaving=None):
@@ -31,9 +33,16 @@ class RawImage:
 
         # Demosaic the GRBG Bayer pattern to BGR
         # OpenCV uses BGR by default
-        bgr_image = cv2.cvtColor(bayer_image, cv2.COLOR_BayerBG2BGR)
+        # see: https://docs.opencv.org/4.x/de/d25/imgproc_color_conversions.html#color_convert_bayer
+        bgr_image = cv2.cvtColor(bayer_image, cv2.COLOR_BayerRGGB2BGR)
 
-        return bgr_image
+        # Apply AWB and gamma-correction
+        image_proc = ImageProc(bgr_image)
+        image_proc.auto_white_balance()
+        # image_proc.gamma_correction()
+        proc_image = image_proc.img
+
+        return proc_image
 
     def to_jpeg(self):
         bgr_image = self.to_image()
