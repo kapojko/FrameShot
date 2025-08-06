@@ -14,6 +14,8 @@ class JpegStreamPlayer:
         self.max_width = max_width
         self.max_height = max_height
 
+        self.save_next_frame = False
+
         self.latest_frame = None
         self.lock = threading.Lock()
 
@@ -30,6 +32,9 @@ class JpegStreamPlayer:
 
         with self.lock:
             self.latest_frame = frame.copy()  # Store the latest decoded frame
+
+        # reset save next frame flag
+        self.save_next_frame = False
 
     def _display_loop(self):
         while self.running:
@@ -73,10 +78,27 @@ class JpegStreamPlayer:
                     2,
                 )
 
+                if self.save_next_frame:
+                    cv2.putText(
+                        frame,
+                        "SAVED",
+                        (10, 90),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        (0, 0, 255),
+                        2,
+                    )
+
                 cv2.imshow("Live Stream", frame)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
+
+                # Process key events
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord("q"):
                     self.running = False
                     break
+                elif key == ord("s") or key == ord(" "):
+                    print("[INFO] Saving next frame...")
+                    self.save_next_frame = True
 
                 # Check for window being closed
                 if not cv2.getWindowProperty("Live Stream", cv2.WND_PROP_VISIBLE):

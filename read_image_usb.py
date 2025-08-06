@@ -115,9 +115,10 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                             return
 
                         # Process image
-                        if not video:
+                        if not video or player.save_next_frame:
                             save_image(image_data, format)
-                        else:
+
+                        if video:
                             player.show_next_frame(image_data)
 
                         buffer.clear()
@@ -156,9 +157,12 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                         print(f"[INFO] Transmission speed: {mbps:.2f}mbit/s")
 
                         image_data = buffer[soi_pos : eof_pos + 2]
-                        if not video:
+
+                        # Process image
+                        if not video or player.save_next_frame:
                             save_image(image_data)
-                        else:
+
+                        if video:
                             player.show_next_frame(image_data)
                     else:
                         print("[WARN] JPEG SOI not found. Skipping image...")
