@@ -7,8 +7,8 @@ import time
 from util.jpeg_stream_player import JpegStreamPlayer
 from util.raw_image import RawImage
 
-VID = 0x1A86
-PID = 0xFE01
+VIDS = [0x1A86, 12619]
+PIDS = [0xFE01]
 
 JPEG_SOI = b"\xff\xd8"  # JPEG start-of-image marker
 JPEG_EOF = b"\xff\xd9"  # JPEG end-of-file marker
@@ -22,11 +22,11 @@ RAW_INTERLEAVING = 8
 OUTPUT_DIR = "DCIM"
 
 
-def find_device_by_vid_pid(target_vid, target_pid):
+def find_device_by_vid_pid(target_vids, target_pids):
     while True:
         ports = serial.tools.list_ports.comports()
         for port in ports:
-            if port.vid == target_vid and port.pid == target_pid:
+            if port.vid in target_vids and port.pid in target_pids:
                 print(f"[INFO] Found device: {port.device}")
                 return port.device
         print("[WAIT] Waiting for USB device to be connected...")
@@ -54,11 +54,16 @@ def save_image(buffer, format="jpeg"):
     print(f"[INFO] Image saved as {filename}")
 
 
-def read_images_loop(com=None, video=False, single=False, raw=False, format="jpeg"):
+def read_images_loop(com=None, video=False, single=False, raw=False, format="jpeg", fast_mode=False):
+    if fast_mode:
+        cmd = b"X"
+    else:
+        cmd = b"S"
+
     while True:
         try:
             if not com:
-                com = find_device_by_vid_pid(VID, PID)
+                com = find_device_by_vid_pid(VIDS, PIDS)
 
                 if not com:
                     print("[ERROR] No FrameCam device found")
@@ -80,15 +85,15 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                 player.start()
 
             if video or single:
-                # Send 'S' character to request the first frame
-                ser.write(b"S")
-                print("[INFO] Sent 'S' to device, waiting for snapshot to be done...")
+                # Send cmd character to request the first frame
+                ser.write(cmd)
+                print(f"[INFO] Sent '{cmd.decode()}' to device, waiting for snapshot to be done...")
 
             buffer = bytearray()
             start_time = None
             last_read_time = None
             while True:
-                chunk = ser.read(2048)
+                chunk = ser.read(1024)
                 if not chunk:
                     if raw and len(buffer) > 0 and last_read_time is not None and (time.time() - last_read_time) > RAW_TIMEOUT:
                         # Raw image ready by timeout
@@ -126,9 +131,9 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                         last_read_time = None
 
                         if video:
-                            # Send 'S' character to request the next frame
-                            ser.write(b"S")
-                            print("[INFO] Sent 'S' to device, waiting for snapshot to be done...")
+                            # Send cmd character to request the next frame
+                            ser.write(cmd)
+                            print(f"[INFO] Sent '{cmd.decode()}' to device, waiting for snapshot to be done...")
                         elif single:
                             return
 
@@ -167,7 +172,8 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                     else:
                         print("[WARN] JPEG SOI not found. Skipping image...")
 
-                    buffer.clear()
+                    buffer = buffer[eof_pos + 2 :]
+
                     start_time = None
                     last_read_time = None
 
@@ -177,9 +183,9 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                             print("[INFO] Video closed by user. Exiting...")
                             return
 
-                        # Send 'S' character to request the next frame
-                        ser.write(b"S")
-                        print("[INFO] Sent 'S' to device, waiting for snapshot to be done...")
+                        # Send cmd character to request the next frame
+                        ser.write(cmd)
+                        print(f"[INFO] Sent '{cmd.decode()}' to device, waiting for snapshot to be done...")
                     elif single:
                         return
 
@@ -210,6 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("-single", action="store_true", help="Read single image")
     parser.add_argument("-raw", action="store_true", help="Read raw image")
     parser.add_argument("-format", metavar="FORMAT", default="jpeg", help="Raw image save format")
+    parser.add_argument("-fast_mode", action="store_true", help="Use fast mode")
 
     args = parser.parse_args()
 
