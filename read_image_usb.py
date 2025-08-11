@@ -1,5 +1,8 @@
 import argparse
 import os
+
+import cv2
+import numpy as np
 import serial
 import serial.tools.list_ports
 import time
@@ -54,7 +57,7 @@ def save_image(buffer, format="jpeg"):
     print(f"[INFO] Image saved as {filename}")
 
 
-def read_images_loop(com=None, video=False, single=False, raw=False, format="jpeg", fast_mode=False):
+def read_images_loop(com=None, video=False, single=False, raw=False, format="jpeg", vflip=False, hflip=False, fast_mode=False):
     if fast_mode:
         cmd = b"X"
     else:
@@ -109,6 +112,10 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
 
                         # Load image
                         raw_image = RawImage(buffer, width=RAW_WIDTH, height=RAW_HEIGHT, interleaving=RAW_INTERLEAVING)
+                        if hflip:
+                            raw_image = raw_image.horizontal_flip()
+                        if vflip:
+                            raw_image = raw_image.vertical_flip()
 
                         # Convert to image
                         if format == "jpeg":
@@ -162,6 +169,17 @@ def read_images_loop(com=None, video=False, single=False, raw=False, format="jpe
                         print(f"[INFO] Transmission speed: {mbps:.2f}mbit/s")
 
                         image_data = buffer[soi_pos : eof_pos + 2]
+
+                        # Flip image
+                        if hflip or vflip:
+                            image_array = cv2.imdecode(np.frombuffer(image_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+                            if image_array is not None:
+                                if hflip:
+                                    image_array = cv2.flip(image_array, 1)
+                                if vflip:
+                                    image_array = cv2.flip(image_array, 0)
+                                _, encoded_image = cv2.imencode('.jpg', image_array)
+                                image_data = encoded_image.tobytes()
 
                         # Process image
                         if not video or player.save_next_frame:
@@ -217,6 +235,8 @@ if __name__ == "__main__":
     parser.add_argument("-raw", action="store_true", help="Read raw image")
     parser.add_argument("-format", metavar="FORMAT", default="jpeg", help="Raw image save format")
     parser.add_argument("-fast_mode", action="store_true", help="Use fast mode")
+    parser.add_argument("-vflip", action="store_true", help="Horizontal flip")
+    parser.add_argument("-hflip", action="store_true", help="Vertical flip")
 
     args = parser.parse_args()
 

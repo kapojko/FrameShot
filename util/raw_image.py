@@ -23,6 +23,20 @@ class RawImage:
 
         return deinterleaved
 
+    def horizontal_flip(self):
+        flipped_buffer = bytearray(len(self.buffer))
+        for y in range(self.height):
+            for x in range(self.width):
+                flipped_buffer[y * self.width + (self.width - 1 - x)] = self.buffer[y * self.width + x]
+        return RawImage(flipped_buffer, self.width, self.height, self.interleaving)
+
+    def vertical_flip(self):
+        flipped_buffer = bytearray(len(self.buffer))
+        for y in range(self.height):
+            for x in range(self.width):
+                flipped_buffer[(self.height - 1 - y) * self.width + x] = self.buffer[y * self.width + x]
+        return RawImage(flipped_buffer, self.width, self.height, self.interleaving)
+
     def to_image(self):
         # Convert buffer to 2D numpy array (grayscale image)
         bayer_image = np.frombuffer(self.buffer, dtype=np.uint8).reshape((self.height, self.width))
