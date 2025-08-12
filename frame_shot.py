@@ -87,8 +87,9 @@ def read_images_loop(com=None, format="jpeg", vflip=False, hflip=False):
 
                 # Calculate transmission time
                 end_time = time.time()
+                kb = len(image_data) / 1024
                 mbps = len(image_data) * 8 / ((end_time - start_time) * 1024 * 1024)
-                print(f"[INFO] Transmission speed: {mbps:.2f}mbit/s")
+                print(f"[INFO] Transfer done, {kb:.1f}kb, speed: {mbps:.2f}mbit/s")
 
                 buffer_image = BufferImage(image_data)
 
