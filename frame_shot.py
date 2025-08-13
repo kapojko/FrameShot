@@ -10,7 +10,7 @@ from util.buffer_image import BufferImage
 from util.device import find_device_by_vid_pid
 from util.jpeg_stream_player import JpegStreamPlayer
 from util.raw_image import RawImage
-from util.snapshot_header import SnapshotHeader
+from util.snapshot_header import SnapshotFormat, SnapshotHeader
 
 RESET_CMD = b"R"
 SNAPSHOT_CMD = b"S"
@@ -91,7 +91,28 @@ def read_images_loop(com=None, format="jpeg", vflip=False, hflip=False):
                 mbps = len(image_data) * 8 / ((end_time - start_time) * 1024 * 1024)
                 print(f"[INFO] Transfer done, {kb:.1f}kb, speed: {mbps:.2f}mbit/s")
 
-                buffer_image = BufferImage(image_data)
+                # Read image
+                if snapshot_header.format == SnapshotFormat.JPEG:
+                    # Direct load JPEG
+                    buffer_image = BufferImage(image_data)
+                else:
+                    # Load raw image
+                    raw_image = RawImage(
+                        image_data,
+                        snapshot_header.format,
+                        snapshot_header.width,
+                        snapshot_header.height,
+                        snapshot_header.interleaving if snapshot_header.interleaving > 0 else None,
+                    )
+
+                    # Convert to image
+                    if format == "jpeg":
+                        image_data = raw_image.to_jpeg()
+                    elif format == "png":
+                        image_data = raw_image.to_png()
+
+                    # Load to buffer image
+                    buffer_image = BufferImage(image_data)
 
                 # Flip image
                 if hflip or vflip:
@@ -125,7 +146,8 @@ def read_images_loop(com=None, format="jpeg", vflip=False, hflip=False):
                 print(f"[WARN] Could not close serial port cleanly: {e}")
             com = None  # Re-trigger device search on next loop
 
-            player.stop()
+            # if player:
+            #     player.stop()
 
 
 if __name__ == "__main__":

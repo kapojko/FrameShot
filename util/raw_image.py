@@ -2,12 +2,14 @@ import numpy as np
 import cv2
 
 from util.image_proc import ImageProc
+from util.snapshot_header import SnapshotFormat
 
 
 class RawImage:
-    def __init__(self, buffer, width, height, interleaving=None):
+    def __init__(self, buffer, format, width, height, interleaving=None):
         # NOTE: format is raw Bayer GRBG, 8-bit
         self.buffer = buffer
+        self.format = format
         self.width = width
         self.height = height
         self.interleaving = interleaving
@@ -48,13 +50,20 @@ class RawImage:
         # Demosaic the GRBG Bayer pattern to BGR
         # OpenCV uses BGR by default
         # see: https://docs.opencv.org/4.x/de/d25/imgproc_color_conversions.html#color_convert_bayer
-        bgr_image = cv2.cvtColor(bayer_image, cv2.COLOR_BayerRGGB2BGR)
+        if self.format == SnapshotFormat.RAW_GRBG8:
+            bgr_image = cv2.cvtColor(bayer_image, cv2.COLOR_BayerRGGB2BGR)
+        elif self.format == SnapshotFormat.RAW_BGGR8:
+            bgr_image = cv2.cvtColor(bayer_image, cv2.COLOR_BayerBGGR2BGR)
+        else:
+            raise ValueError(f"Unsupported raw image format: {self.format}")
 
         # Apply AWB and gamma-correction
-        image_proc = ImageProc(bgr_image)
-        image_proc.auto_white_balance()
+        # image_proc = ImageProc(bgr_image)
+        # image_proc.auto_white_balance()
         # image_proc.gamma_correction()
-        proc_image = image_proc.img
+        # proc_image = image_proc.img
+
+        proc_image = bgr_image
 
         return proc_image
 

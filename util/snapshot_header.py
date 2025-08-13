@@ -4,6 +4,7 @@ from enum import Enum
 class SnapshotFormat(Enum):
     JPEG = 0
     RAW_GRBG8 = 1
+    RAW_BGGR8 = 2
 
 
 class SnapshotHeader:
