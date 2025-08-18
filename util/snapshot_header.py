@@ -34,6 +34,15 @@ class SnapshotHeader:
         # image size (4 byte, big endian)
         self.image_size = int.from_bytes(self.buffer[12:16], "big")
 
+        # shutter mode (1 byte)
+        self.shutter_mode = self.buffer[16]
+
+        # gain mode (1 byte)
+        self.gain_mode = self.buffer[17]
+
+        # reserved (2 bytes)
+        self.reserved = self.buffer[18:20]
+
     def valid(self):
         if self.magic != SnapshotHeader.MAGIC:
             print(f"[ERROR] Invalid magic: {self.magic}, expected: {SnapshotHeader.MAGIC}")

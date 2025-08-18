@@ -1,3 +1,4 @@
+import copy
 import threading
 import cv2
 import numpy as np
@@ -23,15 +24,16 @@ class JpegStreamPlayer:
         self.running = True
         threading.Thread(target=self._display_loop, daemon=True).start()
 
-    def show_next_frame(self, jpeg_buffer):
+    def show_next_frame(self, image_buffer, snapshot_header=None):
         self.fps_counter.update()
 
-        frame = cv2.imdecode(np.frombuffer(jpeg_buffer, dtype=np.uint8), cv2.IMREAD_COLOR)
+        frame = cv2.imdecode(np.frombuffer(image_buffer, dtype=np.uint8), cv2.IMREAD_COLOR)
         if frame is None:
             return
 
         with self.lock:
             self.latest_frame = frame.copy()  # Store the latest decoded frame
+            self.latest_header = copy.deepcopy(snapshot_header) if snapshot_header else None
 
         # reset save next frame flag
         self.save_next_frame = False
@@ -83,6 +85,32 @@ class JpegStreamPlayer:
                         frame,
                         "SAVED",
                         (10, 90),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        (0, 0, 255),
+                        2,
+                    )
+
+                # Add image modes in the right top corner
+                if self.latest_header is not None:
+                    modes_x = frame.shape[1] - 200
+
+                    # Shutter mode
+                    cv2.putText(
+                        frame,
+                        f"Shutter: {self.latest_header.shutter_mode}",
+                        (modes_x, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        (0, 0, 255),
+                        2,
+                    )
+
+                    # Gain mode
+                    cv2.putText(
+                        frame,
+                        f"Gain: {self.latest_header.gain_mode}",
+                        (modes_x, 60),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1,
                         (0, 0, 255),

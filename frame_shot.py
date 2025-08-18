@@ -59,8 +59,8 @@ def read_images_loop(com=None, format="jpeg", vflip=False, hflip=False):
                 ser.write(SNAPSHOT_CMD)
                 print(f"[INFO] Sent '{SNAPSHOT_CMD.decode()}' to device, waiting for snapshot to be done...")
 
-                # Read snapshot header (16 byte)
-                header_data = ser.read(16)
+                # Read snapshot header (20 bytes)
+                header_data = ser.read(20)
                 if not header_data:
                     print("[ERROR] Could not read snapshot header")
                     time.sleep(1)
@@ -123,7 +123,7 @@ def read_images_loop(com=None, format="jpeg", vflip=False, hflip=False):
                     buffer_image.save(format)
 
                 # Show image
-                player.show_next_frame(image_data)
+                player.show_next_frame(image_data, snapshot_header)
 
                 # Check for video to be closed
                 if not player.running:
