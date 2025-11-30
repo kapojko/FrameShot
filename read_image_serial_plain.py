@@ -6,7 +6,7 @@ OUTPUT_DIR = "DCIM"
 
 
 def read_image(com_port):
-    ser = serial.Serial(com_port, 115200, timeout=10)  # adjust port
+    ser = serial.Serial(com_port, 460800, timeout=10)  # adjust port
 
     current_time = time.strftime("%Y%m%d_%H%M%S")
     filename = f"{OUTPUT_DIR}/Cam_{current_time}.jpg"
